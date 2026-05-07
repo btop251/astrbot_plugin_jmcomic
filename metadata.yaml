@@ -1,0 +1,6 @@
+name: astrbot_plugin_jmcomic
+display_name: JMComic
+desc: 基于 jmcomic 的 AstrBot 插件，支持搜索、详情查询与后台下载任务
+version: v0.1.0
+author: btop251&hect0x7&openai
+repo: https://github.com/btop251/astrbot_plugin_jmcomic

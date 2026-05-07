@@ -1,0 +1,169 @@
+{
+  "basic": {
+    "type": "object",
+    "description": "常用设置。大多数用户只需要先看这一组。",
+    "items": {
+      "default_download_format": {
+        "type": "string",
+        "description": "下载命令默认格式。推荐保持 pdf。",
+        "default": "pdf"
+      },
+      "search_default_limit": {
+        "type": "int",
+        "description": "搜索结果默认展示条数。",
+        "default": 5
+      },
+      "image_batch_size": {
+        "type": "int",
+        "description": "图片模式回传时，每条消息最多发几张图。",
+        "default": 10
+      },
+      "jm_project_path": {
+        "type": "string",
+        "description": "可选。本地 JM 源码路径。Docker 环境通常留空即可。",
+        "default": ""
+      }
+    }
+  },
+  "network": {
+    "type": "object",
+    "description": "网络与连接设置。",
+    "items": {
+      "client_impl": {
+        "type": "string",
+        "description": "JM 客户端实现。一般用 api，特殊情况下可改 html。",
+        "default": "api"
+      },
+      "retry_times": {
+        "type": "int",
+        "description": "请求失败重试次数。",
+        "default": 5
+      },
+      "proxy": {
+        "type": "string",
+        "description": "代理设置。可填 system、none 或具体代理地址。",
+        "default": "system"
+      }
+    }
+  },
+  "auth": {
+    "type": "object",
+    "description": "账号与登录相关设置。一般只在访问受限内容时需要。",
+    "items": {
+      "cookies_avs": {
+        "type": "string",
+        "description": "可选。JM 的 AVS cookie 值。",
+        "default": ""
+      },
+      "username": {
+        "type": "string",
+        "description": "可选。JM 登录用户名。",
+        "default": ""
+      },
+      "password": {
+        "type": "string",
+        "description": "可选。JM 登录密码。",
+        "default": ""
+      }
+    }
+  },
+  "download": {
+    "type": "object",
+    "description": "下载与输出设置。",
+    "items": {
+      "download_base_dir": {
+        "type": "string",
+        "description": "下载缓存根目录。留空时默认使用插件数据目录下的 cache。",
+        "default": ""
+      },
+      "dir_rule": {
+        "type": "string",
+        "description": "JM 下载目录规则。默认按 本子ID/章节序号 组织。",
+        "default": "Bd_Aid_Pindex"
+      },
+      "normalize_zh": {
+        "type": "string",
+        "description": "目录中文归一化。可填空、zh-cn、zh-tw。",
+        "default": ""
+      },
+      "download_cache": {
+        "type": "bool",
+        "description": "若文件已存在，是否跳过重复下载。",
+        "default": true
+      },
+      "decode_image": {
+        "type": "bool",
+        "description": "是否对图片进行解码还原。",
+        "default": true
+      },
+      "thread_image": {
+        "type": "int",
+        "description": "单章节图片下载并发数。",
+        "default": 10
+      },
+      "thread_photo": {
+        "type": "int",
+        "description": "单本子章节下载并发数。",
+        "default": 4
+      }
+    }
+  },
+  "cache": {
+    "type": "object",
+    "description": "缓存保留策略。",
+    "items": {
+      "cache_keep_last": {
+        "type": "int",
+        "description": "本地仅保留最近几次下载缓存。",
+        "default": 3
+      }
+    }
+  },
+  "permission": {
+    "type": "object",
+    "description": "权限与使用场景限制。",
+    "items": {
+      "allow_group_read": {
+        "type": "bool",
+        "description": "是否允许群聊使用查询命令。",
+        "default": true
+      },
+      "allow_private_read": {
+        "type": "bool",
+        "description": "是否允许私聊使用查询命令。",
+        "default": true
+      },
+      "allow_group_download": {
+        "type": "bool",
+        "description": "是否允许群聊执行下载命令。",
+        "default": false
+      },
+      "download_admin_only": {
+        "type": "bool",
+        "description": "下载命令是否仅管理员可用。",
+        "default": true
+      }
+    }
+  },
+  "advanced": {
+    "type": "object",
+    "description": "高级设置。一般保持默认即可。",
+    "items": {
+      "max_concurrent_tasks": {
+        "type": "int",
+        "description": "后台任务最大并发数。",
+        "default": 2
+      },
+      "task_history_limit": {
+        "type": "int",
+        "description": "任务历史保留数量。",
+        "default": 100
+      },
+      "enable_jm_log": {
+        "type": "bool",
+        "description": "是否启用 jmcomic 内部日志。",
+        "default": false
+      }
+    }
+  }
+}
