@@ -1,12 +1,8 @@
 # astrbot_plugin_jmcomic
 
+![微信图片_20260508142304_413_22](./assets/微信图片_20260508142304_413_22.jpg)
+
 基于 [JMComic-Crawler-Python](https://github.com/hect0x7/JMComic-Crawler-Python) 封装的 AstrBot 插件，优先面向 QQ（NapCat / OneBot）场景设计。
-
-这个插件的目标很明确：
-
-- 用简短命令快速搜索 JM 内容
-- 下载完成后直接上传回 AstrBot 当前连接的平台
-- 本地仅保留最近 3 次下载缓存，避免长期堆积文件
 
 ## 默认行为
 

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
 from .config_mapper import ConfigMapper
 from .exceptions import JmImportError, JmPluginError
 from .parsers import normalize_format_name, normalize_rank_name
+from .settings import get_setting
 
 
 class JmService:
@@ -27,8 +29,8 @@ class JmService:
         option = self.create_option()
         client = option.new_jm_client()
         if login_if_possible:
-            username = str(self.mapper.config.get("username", "")).strip()
-            password = str(self.mapper.config.get("password", "")).strip()
+            username = str(get_setting(self.mapper.config, "username", "")).strip()
+            password = str(get_setting(self.mapper.config, "password", "")).strip()
             if username and password:
                 client.login(username, password)
         return option, client
@@ -97,9 +99,11 @@ class JmService:
             raise JmPluginError("未找到可用于生成 PDF 的图片。")
 
         from PIL import Image
+        from pypdf import PdfReader
 
         first = None
         rest = []
+        temp_pdf_path = pdf_path.with_name(f"{pdf_path.stem}.tmp.pdf")
         try:
             for index, image_path in enumerate(image_files):
                 image = Image.open(image_path)
@@ -113,13 +117,34 @@ class JmService:
                 raise JmPluginError("PDF 生成失败：没有首张图片。")
 
             pdf_path.parent.mkdir(parents=True, exist_ok=True)
-            first.save(pdf_path, save_all=True, append_images=rest)
+            if temp_pdf_path.exists():
+                temp_pdf_path.unlink()
+            first.save(
+                temp_pdf_path,
+                format="PDF",
+                save_all=True,
+                append_images=rest,
+            )
+
+            # 验证 PDF 是否可读，避免把损坏文件当成功结果返回
+            reader = PdfReader(str(temp_pdf_path))
+            if len(reader.pages) == 0:
+                raise JmPluginError("PDF 生成失败：生成结果没有任何页面。")
+
+            if pdf_path.exists():
+                pdf_path.unlink()
+            os.replace(temp_pdf_path, pdf_path)
             return pdf_path
         finally:
             if first is not None:
                 first.close()
             for image in rest:
                 image.close()
+            if temp_pdf_path.exists():
+                try:
+                    temp_pdf_path.unlink()
+                except Exception:
+                    pass
 
     def download_album(self, album_id: str, output_format: str, base_dir: str | None = None) -> dict[str, Any]:
         option, normalized = self._build_download_option(output_format, base_dir)

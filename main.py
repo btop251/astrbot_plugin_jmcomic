@@ -82,21 +82,74 @@ class Main(star.Star):
         if not bool(get_setting(self.config, "allow_group_download", False)):
             raise JmPermissionError("当前配置不允许群聊执行下载命令。")
 
+    async def _send_text_proactively(self, event: AstrMessageEvent, text: str) -> None:
+        ok = await self.context.send_message(
+            event.unified_msg_origin,
+            MessageEventResult().message(text).use_t2i(False),
+        )
+        if not ok:
+            raise JmPluginError("主动发送文本消息失败：未找到可用平台或会话。")
+
+    async def _upload_pdf_via_aiocqhttp(self, event: AstrMessageEvent, pdf_path: str) -> None:
+        platform = self.context.get_platform_inst(event.get_platform_id())
+        if platform is None or not hasattr(platform, "bot"):
+            raise JmPluginError("未找到 aiocqhttp 平台实例，无法上传 PDF。")
+
+        pdf_file = str(Path(pdf_path).resolve())
+        pdf_name = Path(pdf_file).name
+
+        if event.is_private_chat():
+            user_id = event.get_sender_id()
+            if not user_id.isdigit():
+                raise JmPluginError(f"私聊 user_id 非法，无法上传文件: {user_id}")
+            await asyncio.wait_for(
+                platform.bot.call_action(  # type: ignore[attr-defined]
+                    "upload_private_file",
+                    user_id=int(user_id),
+                    file=pdf_file,
+                    name=pdf_name,
+                ),
+                timeout=120,
+            )
+            return
+
+        group_id = event.get_group_id()
+        if not group_id.isdigit():
+            raise JmPluginError(f"群号非法，无法上传群文件: {group_id}")
+        await asyncio.wait_for(
+            platform.bot.call_action(  # type: ignore[attr-defined]
+                "upload_group_file",
+                group_id=int(group_id),
+                file=pdf_file,
+                name=pdf_name,
+            ),
+            timeout=120,
+        )
+
     async def _send_pdf(self, event: AstrMessageEvent, task_id: str, pdf_path: str) -> None:
-        payload = MessageEventResult().message(
-            f"下载完成，已上传 PDF。\n任务ID: {task_id}\n"
-        ).use_t2i(False)
+        await self._send_text_proactively(
+            event,
+            f"下载完成，正在回传 PDF。\n任务ID: {task_id}",
+        )
+
+        # NapCat / OneBot 场景优先走原生文件上传 action，避免 file 段被当成异常消息处理。
+        if event.get_platform_name() == "aiocqhttp":
+            await self._upload_pdf_via_aiocqhttp(event, pdf_path)
+            return
+
+        payload = MessageEventResult().use_t2i(False)
         payload.chain.append(File(name=Path(pdf_path).name, file=pdf_path))
-        await event.send(payload)
+        ok = await self.context.send_message(event.unified_msg_origin, payload)
+        if not ok:
+            raise JmPluginError("主动发送 PDF 失败：未找到可用平台或会话。")
 
     async def _send_images(self, event: AstrMessageEvent, task_id: str, image_files: list[str]) -> None:
         batch_size = int(get_setting(self.config, "image_batch_size", 10) or 10)
         total = len(image_files)
 
-        await event.send(
-            MessageEventResult()
-            .message(f"下载完成，开始回传图片。\n任务ID: {task_id}\n图片数: {total}")
-            .use_t2i(False)
+        await self._send_text_proactively(
+            event,
+            f"下载完成，开始回传图片。\n任务ID: {task_id}\n图片数: {total}",
         )
 
         for start in range(0, total, batch_size):
@@ -104,7 +157,9 @@ class Main(star.Star):
             payload = MessageEventResult().use_t2i(False)
             for image_path in batch:
                 payload.chain.append(Image.fromFileSystem(image_path))
-            await event.send(payload)
+            ok = await self.context.send_message(event.unified_msg_origin, payload)
+            if not ok:
+                raise JmPluginError("主动发送图片失败：未找到可用平台或会话。")
             await asyncio.sleep(0.5)
 
     async def _upload_result(self, event: AstrMessageEvent, task_id: str, result: dict) -> None:
@@ -123,13 +178,10 @@ class Main(star.Star):
         refreshed = self.task_manager.get_task(record.task_id)
 
         if refreshed.status != "success":
-            await event.send(
-                MessageEventResult()
-                .message(
-                    f"任务执行失败。\n任务ID: {refreshed.task_id}\n"
-                    f"错误类型: {refreshed.error_type or '-'}\n错误信息: {refreshed.error_message or '-'}"
-                )
-                .use_t2i(False)
+            await self._send_text_proactively(
+                event,
+                f"任务执行失败。\n任务ID: {refreshed.task_id}\n"
+                f"错误类型: {refreshed.error_type or '-'}\n错误信息: {refreshed.error_message or '-'}",
             )
             self.cache_manager.prune(list(self.task_manager.tasks.values()))
             return
@@ -146,13 +198,10 @@ class Main(star.Star):
             refreshed.error_message = str(e)
             refreshed.summary = (refreshed.summary or "").strip() + "；上传失败，缓存已保留"
             self.state_store.save_tasks(self.task_manager.tasks)
-            await event.send(
-                MessageEventResult()
-                .message(
-                    f"下载完成，但上传失败。\n任务ID: {refreshed.task_id}\n"
-                    f"错误类型: {refreshed.error_type}\n错误信息: {refreshed.error_message}"
-                )
-                .use_t2i(False)
+            await self._send_text_proactively(
+                event,
+                f"下载完成，但上传失败。\n任务ID: {refreshed.task_id}\n"
+                f"错误类型: {refreshed.error_type}\n错误信息: {refreshed.error_message}",
             )
         finally:
             self.cache_manager.prune(list(self.task_manager.tasks.values()))
