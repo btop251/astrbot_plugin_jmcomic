@@ -92,6 +92,7 @@ class ConfigMapper:
             f"默认下载格式: {get_setting(self.config, 'default_download_format', 'pdf')}\n"
             f"搜索返回条数: {get_setting(self.config, 'search_default_limit', 5)}\n"
             f"图片分批回传数量: {get_setting(self.config, 'image_batch_size', 10)}\n"
+            f"PDF 分批合成数量: {get_setting(self.config, 'pdf_merge_batch_size', 20)}\n"
             f"客户端实现: {get_setting(self.config, 'client_impl', 'api')}\n"
             f"重试次数: {get_setting(self.config, 'retry_times', 5)}\n"
             f"代理: {get_setting(self.config, 'proxy', 'system')}\n"

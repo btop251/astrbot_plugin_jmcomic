@@ -8,6 +8,7 @@ SETTING_PATHS = {
     "default_download_format": "basic.default_download_format",
     "search_default_limit": "basic.search_default_limit",
     "image_batch_size": "basic.image_batch_size",
+    "pdf_merge_batch_size": "basic.pdf_merge_batch_size",
     "client_impl": "network.client_impl",
     "retry_times": "network.retry_times",
     "proxy": "network.proxy",

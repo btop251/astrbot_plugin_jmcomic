@@ -18,6 +18,11 @@
         "description": "图片模式回传时，每条消息最多发几张图。",
         "default": 10
       },
+      "pdf_merge_batch_size": {
+        "type": "int",
+        "description": "PDF 合成时，每批最多处理多少张图片。推荐 20。",
+        "default": 20
+      },
       "jm_project_path": {
         "type": "string",
         "description": "可选。本地 JM 源码路径。Docker 环境通常留空即可。",

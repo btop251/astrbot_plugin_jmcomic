@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -94,39 +95,78 @@ class JmService:
             return background
         return image.convert("RGB")
 
-    def _build_pdf(self, image_files: list[Path], pdf_path: Path) -> Path:
-        if not image_files:
-            raise JmPluginError("未找到可用于生成 PDF 的图片。")
-
+    def _save_image_batch_pdf(self, image_paths: list[Path], batch_pdf_path: Path) -> None:
         from PIL import Image
-        from pypdf import PdfReader
 
-        first = None
-        rest = []
-        temp_pdf_path = pdf_path.with_name(f"{pdf_path.stem}.tmp.pdf")
+        if not image_paths:
+            raise JmPluginError("批次 PDF 生成失败：当前批次没有图片。")
+
+        converted_images = []
         try:
-            for index, image_path in enumerate(image_files):
-                image = Image.open(image_path)
-                converted = self._image_to_rgb(image)
-                if index == 0:
-                    first = converted
-                else:
-                    rest.append(converted)
+            for image_path in image_paths:
+                with Image.open(image_path) as image:
+                    converted = self._image_to_rgb(image)
+                    if converted is image:
+                        converted = image.copy()
+                    converted_images.append(converted)
 
-            if first is None:
-                raise JmPluginError("PDF 生成失败：没有首张图片。")
-
-            pdf_path.parent.mkdir(parents=True, exist_ok=True)
-            if temp_pdf_path.exists():
-                temp_pdf_path.unlink()
+            first = converted_images[0]
+            rest = converted_images[1:]
+            batch_pdf_path.parent.mkdir(parents=True, exist_ok=True)
             first.save(
-                temp_pdf_path,
+                batch_pdf_path,
                 format="PDF",
                 save_all=True,
                 append_images=rest,
             )
+        finally:
+            for image in converted_images:
+                try:
+                    image.close()
+                except Exception:
+                    pass
 
-            # 验证 PDF 是否可读，避免把损坏文件当成功结果返回
+    def _build_pdf(self, image_files: list[Path], pdf_path: Path) -> Path:
+        if not image_files:
+            raise JmPluginError("未找到可用于生成 PDF 的图片。")
+
+        from pypdf import PdfReader, PdfWriter
+
+        batch_size = int(get_setting(self.mapper.config, "pdf_merge_batch_size", 20) or 20)
+        batch_size = max(1, batch_size)
+
+        temp_pdf_path = pdf_path.with_name(f"{pdf_path.stem}.tmp.pdf")
+        temp_batch_dir = pdf_path.parent / f".{pdf_path.stem}_batches_tmp"
+
+        try:
+            pdf_path.parent.mkdir(parents=True, exist_ok=True)
+            if temp_pdf_path.exists():
+                temp_pdf_path.unlink()
+            if temp_batch_dir.exists():
+                shutil.rmtree(temp_batch_dir, ignore_errors=True)
+            temp_batch_dir.mkdir(parents=True, exist_ok=True)
+
+            batch_pdf_files: list[Path] = []
+            for start in range(0, len(image_files), batch_size):
+                batch = image_files[start : start + batch_size]
+                batch_index = start // batch_size + 1
+                batch_pdf_path = temp_batch_dir / f"batch_{batch_index:04d}.pdf"
+                self._save_image_batch_pdf(batch, batch_pdf_path)
+                batch_pdf_files.append(batch_pdf_path)
+
+            writer = PdfWriter()
+            try:
+                for batch_pdf in batch_pdf_files:
+                    writer.append(str(batch_pdf))
+
+                with open(temp_pdf_path, "wb") as fp:
+                    writer.write(fp)
+            finally:
+                try:
+                    writer.close()
+                except Exception:
+                    pass
+
             reader = PdfReader(str(temp_pdf_path))
             if len(reader.pages) == 0:
                 raise JmPluginError("PDF 生成失败：生成结果没有任何页面。")
@@ -136,15 +176,13 @@ class JmService:
             os.replace(temp_pdf_path, pdf_path)
             return pdf_path
         finally:
-            if first is not None:
-                first.close()
-            for image in rest:
-                image.close()
             if temp_pdf_path.exists():
                 try:
                     temp_pdf_path.unlink()
                 except Exception:
                     pass
+            if temp_batch_dir.exists():
+                shutil.rmtree(temp_batch_dir, ignore_errors=True)
 
     def download_album(self, album_id: str, output_format: str, base_dir: str | None = None) -> dict[str, Any]:
         option, normalized = self._build_download_option(output_format, base_dir)
