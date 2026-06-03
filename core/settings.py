@@ -7,8 +7,10 @@ SETTING_PATHS = {
     "jm_project_path": "basic.jm_project_path",
     "default_download_format": "basic.default_download_format",
     "search_default_limit": "basic.search_default_limit",
+    "album_chapter_page_size": "basic.album_chapter_page_size",
     "image_batch_size": "basic.image_batch_size",
     "pdf_merge_batch_size": "basic.pdf_merge_batch_size",
+    "cover_send_mode": "basic.cover_send_mode",
     "client_impl": "network.client_impl",
     "retry_times": "network.retry_times",
     "proxy": "network.proxy",
@@ -29,6 +31,7 @@ SETTING_PATHS = {
     "download_admin_only": "permission.download_admin_only",
     "max_concurrent_tasks": "advanced.max_concurrent_tasks",
     "task_history_limit": "advanced.task_history_limit",
+    "enable_task_cancel": "advanced.enable_task_cancel",
     "enable_jm_log": "advanced.enable_jm_log",
 }
 

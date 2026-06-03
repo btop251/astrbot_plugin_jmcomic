@@ -25,6 +25,30 @@ class TaskManager:
             raise JmTaskNotFoundError(f"未找到任务: {task_id}")
         return task
 
+    def cancel_task(self, task_id: str) -> JmTaskRecord:
+        task = self.get_task(task_id)
+        if task.status == "success" and not task.uploaded:
+            task.cancel_requested = True
+            task.status = "cancelled"
+            task.summary = (task.summary or "").strip() + "；已请求停止，跳过后续上传"
+            self.store.save_tasks(self.tasks)
+            return task
+
+        if task.status in {"success", "failed", "upload_failed", "cancelled"}:
+            task.summary = task.summary or "任务已结束，无法再次停止。"
+            self.store.save_tasks(self.tasks)
+            return task
+
+        task.cancel_requested = True
+        if task.status == "queued":
+            task.status = "cancelled"
+            task.finished_at = datetime.now().isoformat(timespec="seconds")
+            task.summary = "任务在排队阶段已取消。"
+        else:
+            task.summary = "已请求停止；如果底层下载已开始，将在当前阶段结束后停止后续上传。"
+        self.store.save_tasks(self.tasks)
+        return task
+
     def create_task(
         self,
         task_type: str,
@@ -48,6 +72,13 @@ class TaskManager:
 
     async def run_task(self, record: JmTaskRecord, func, *args, **kwargs):
         async with self.semaphore:
+            if record.cancel_requested or record.status == "cancelled":
+                record.status = "cancelled"
+                record.finished_at = datetime.now().isoformat(timespec="seconds")
+                record.summary = record.summary or "任务已取消。"
+                self.store.save_tasks(self.tasks)
+                return None
+
             record.status = "running"
             record.started_at = datetime.now().isoformat(timespec="seconds")
             self.store.save_tasks(self.tasks)
@@ -55,10 +86,13 @@ class TaskManager:
             result = None
             try:
                 result = await asyncio.to_thread(func, *args, **kwargs)
-                record.status = "success"
+                record.status = "cancelled" if record.cancel_requested else "success"
                 record.finished_at = datetime.now().isoformat(timespec="seconds")
-                record.save_dir = str(result.get("save_dir", ""))
-                record.summary = str(result.get("summary", ""))
+                if result:
+                    record.save_dir = str(result.get("save_dir", ""))
+                    record.summary = str(result.get("summary", ""))
+                if record.cancel_requested:
+                    record.summary = (record.summary or "").strip() + "；已按停止请求跳过后续上传"
             except Exception as e:  # pragma: no cover
                 record.status = "failed"
                 record.finished_at = datetime.now().isoformat(timespec="seconds")

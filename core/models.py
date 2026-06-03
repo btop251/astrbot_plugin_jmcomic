@@ -19,6 +19,7 @@ class JmTaskRecord:
     finished_at: str = ""
     save_dir: str = ""
     uploaded: bool = False
+    cancel_requested: bool = False
     summary: str = ""
     error_type: str = ""
     error_message: str = ""
@@ -28,4 +29,6 @@ class JmTaskRecord:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "JmTaskRecord":
-        return cls(**data)
+        known_fields = cls.__dataclass_fields__.keys()
+        filtered = {key: value for key, value in data.items() if key in known_fields}
+        return cls(**filtered)

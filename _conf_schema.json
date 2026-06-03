@@ -13,6 +13,16 @@
         "description": "搜索结果默认展示条数。",
         "default": 5
       },
+      "album_chapter_page_size": {
+        "type": "int",
+        "description": "本子详情和章节列表每页展示的章节数量。",
+        "default": 10
+      },
+      "cover_send_mode": {
+        "type": "string",
+        "description": "jmalbum 封面发送模式。url 表示使用封面链接，download 表示先覆盖缓存到本地再随聊天记录发送，none 表示不发送封面。封面节点发送失败时会自动降级为纯文字详情。",
+        "default": "url"
+      },
       "image_batch_size": {
         "type": "int",
         "description": "图片模式回传时，每条消息最多发几张图。",
@@ -163,6 +173,11 @@
         "type": "int",
         "description": "任务历史保留数量。",
         "default": 100
+      },
+      "enable_task_cancel": {
+        "type": "bool",
+        "description": "是否启用 /jm停止 任务停止命令。运行中任务为软停止，会跳过后续上传。",
+        "default": true
       },
       "enable_jm_log": {
         "type": "bool",

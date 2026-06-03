@@ -91,6 +91,8 @@ class ConfigMapper:
             f"JM 配置摘要\n"
             f"默认下载格式: {get_setting(self.config, 'default_download_format', 'pdf')}\n"
             f"搜索返回条数: {get_setting(self.config, 'search_default_limit', 5)}\n"
+            f"章节分页数量: {get_setting(self.config, 'album_chapter_page_size', 10)}\n"
+            f"封面发送模式: {get_setting(self.config, 'cover_send_mode', 'url')}\n"
             f"图片分批回传数量: {get_setting(self.config, 'image_batch_size', 10)}\n"
             f"PDF 分批合成数量: {get_setting(self.config, 'pdf_merge_batch_size', 20)}\n"
             f"客户端实现: {get_setting(self.config, 'client_impl', 'api')}\n"
@@ -101,5 +103,6 @@ class ConfigMapper:
             f"保留缓存次数: {get_setting(self.config, 'cache_keep_last', 3)}\n"
             f"群聊可查询: {get_setting(self.config, 'allow_group_read', True)}\n"
             f"群聊可下载: {get_setting(self.config, 'allow_group_download', False)}\n"
-            f"下载仅管理员: {get_setting(self.config, 'download_admin_only', True)}"
+            f"下载仅管理员: {get_setting(self.config, 'download_admin_only', True)}\n"
+            f"任务停止命令: {get_setting(self.config, 'enable_task_cancel', True)}"
         )

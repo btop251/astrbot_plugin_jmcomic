@@ -59,6 +59,32 @@ class JmService:
             return client.day_ranking(1)
         raise JmPluginError(f"不支持的排行类型: {rank_name}")
 
+    def get_album_cover_url(self, album_id: str) -> str:
+        return self.jmcomic.JmcomicText.get_album_cover_url(album_id)
+
+    def download_album_cover(self, album_id: str, save_path: str) -> str:
+        _option, client = self.create_client(login_if_possible=True)
+        target_path = Path(save_path)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = target_path.with_name(f"{target_path.stem}.tmp{target_path.suffix or '.jpg'}")
+
+        try:
+            if temp_path.exists():
+                temp_path.unlink()
+            client.download_album_cover(album_id, str(temp_path))
+            if not temp_path.exists() or temp_path.stat().st_size == 0:
+                raise JmPluginError("封面下载失败：缓存文件不存在或为空。")
+            if target_path.exists():
+                target_path.unlink()
+            os.replace(temp_path, target_path)
+            return str(target_path)
+        finally:
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except Exception:
+                    pass
+
     def _build_download_option(self, output_format: str, base_dir: str | None = None):
         option = self.create_option()
         normalized = normalize_format_name(output_format)
